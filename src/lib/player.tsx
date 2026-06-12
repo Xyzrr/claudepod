@@ -103,6 +103,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const segmentsRef = useRef<Segment[]>(segments);
   segmentsRef.current = segments;
+  // Set after the activeMessage query below; read inside audio event handlers.
+  const activeMessageStatusRef = useRef<string | null>(null);
   const segIndexRef = useRef(segIndex);
   segIndexRef.current = segIndex;
   const rateRef = useRef(rate);
@@ -159,14 +161,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const onTime = () => setCurrentTime(el.currentTime);
     const onEnded = () => {
       const next = segIndexRef.current + 1;
-      if (next < segmentsRef.current.length || waitingForIndexRef.current !== null) {
+      if (next < segmentsRef.current.length) {
         playSegmentAt(next);
-      } else {
-        // The message may still be streaming — wait for a possible next
-        // segment; the segments effect below resumes when it arrives.
-        waitingForIndexRef.current = next;
-        setBuffering(true);
+        return;
       }
+      const status = activeMessageStatusRef.current;
+      const generationDone = status !== "streaming" && status !== "pending";
+      if (generationDone) {
+        // That was the last segment — stop cleanly (mic returns to prompt mode).
+        waitingForIndexRef.current = null;
+        setBuffering(false);
+        setPlaying(false);
+        return;
+      }
+      // The message is still streaming — wait for the next segment; the
+      // segments effect below resumes when it arrives.
+      waitingForIndexRef.current = next;
+      setBuffering(true);
     };
     const onMeta = () => {
       const segment = segmentsRef.current[segIndexRef.current];
@@ -194,6 +205,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     api.messages.get,
     activeMessageId ? { messageId: activeMessageId } : "skip",
   );
+  activeMessageStatusRef.current = activeMessage?.status ?? null;
 
   // Resume when the segment we were waiting for becomes ready, or finish if
   // the message is done and no further segments are coming.
@@ -224,7 +236,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setBuffering(false);
       setPlaying(false);
     }
-  }, [segments, activeMessage, playSegmentAt]);
+    // `buffering` is a dep so this re-evaluates right after `ended` fires,
+    // not only when segments/message update.
+  }, [segments, activeMessage, buffering, playSegmentAt]);
 
   const durations = useMemo(() => segments.map(segmentDuration), [segments]);
   const total = useMemo(() => durations.reduce((a, b) => a + b, 0), [durations]);
@@ -254,7 +268,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (messageId === activeMessageId) {
         unlock();
         const el = audio();
-        if (el.paused && el.src && waitingForIndexRef.current === null) {
+        // Finished playing through? Pressing play again replays from the top.
+        const atEnd =
+          el.ended && segIndexRef.current >= segmentsRef.current.length - 1;
+        if (!atEnd && el.paused && el.src && waitingForIndexRef.current === null) {
           metaRef.current = meta ?? metaRef.current;
           setPlaying(true);
           void el.play().catch(() => setPlaying(false));
