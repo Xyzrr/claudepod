@@ -224,9 +224,17 @@ The app is deployed at <strong>https://claudepod.vercel.app</strong> (Vercel pro
 <strong>production</strong> Convex deployment
 <code>polished-opossum-478.convex.cloud</code> — a separate deployment from dev, with
 its own data, env vars, and auth keys (accounts do not carry over from dev).
-<code>bun run deploy</code> (scripts/deploy.ts) pushes Convex prod functions, builds the
-frontend against the prod URL, and ships the static build to Vercel prebuilt — no remote
-build. It needs <code>VERCEL_TOKEN</code> in <code>.env</code>. If prod env vars change,
+<strong>Deploys are continuous</strong>: the Vercel project is connected to the GitHub repo
+(<code>Xyzrr/claudepod</code>), so every push to <code>main</code> deploys to production and
+every PR gets a preview. The build command lives in <code>vercel.json</code>: on production
+it runs <code>npx convex deploy --cmd 'npm run build'</code> (pushes Convex prod functions
+and builds the frontend against the prod URL, authenticated by the
+<code>CONVEX_DEPLOY_KEY</code> env var on Vercel, production scope); on previews it builds
+the frontend only, pointed at prod Convex via a preview-scoped
+<code>VITE_CONVEX_URL</code>. <code>vercel.json</code> also holds the SPA fallback rewrite.
+<code>bun run deploy</code> (scripts/deploy.ts) remains as a manual escape hatch — it ships
+a locally-built bundle directly and needs <code>VERCEL_TOKEN</code> in <code>.env</code>.
+If prod env vars change,
 use <code>bun run sync-env -- --prod</code> / <code>bun run setup-auth -- --prod</code>.
 The dev tunnel alternative for phone testing is
 <code>cloudflared tunnel --url http://localhost:5173</code> (mic requires HTTPS).
