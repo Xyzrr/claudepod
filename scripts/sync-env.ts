@@ -1,6 +1,6 @@
 /**
- * Push server-side secrets from .env to the active Convex deployment.
- * Run after editing .env: bun run sync-env
+ * Push server-side secrets from .env / .env.local to the active Convex
+ * deployment. Run after editing either file: bun run sync-env
  */
 import { $ } from "bun";
 
@@ -12,16 +12,20 @@ const KEYS = [
   "TTS_PROVIDER",
 ];
 
-const envFile = Bun.file(".env");
-if (!(await envFile.exists())) {
-  console.error("No .env file found. Copy .env.example to .env first.");
-  process.exit(1);
-}
-
 const env: Record<string, string> = {};
-for (const line of (await envFile.text()).split("\n")) {
-  const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-  if (match) env[match[1]] = match[2].trim();
+let foundAny = false;
+for (const path of [".env", ".env.local"]) {
+  const file = Bun.file(path);
+  if (!(await file.exists())) continue;
+  foundAny = true;
+  for (const line of (await file.text()).split("\n")) {
+    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (match) env[match[1]] = match[2].trim();
+  }
+}
+if (!foundAny) {
+  console.error("No .env or .env.local found. Copy .env.example to .env first.");
+  process.exit(1);
 }
 
 for (const key of KEYS) {
