@@ -36,8 +36,13 @@ export default function ChapterPlayer({
 
   const generating = message.status === "pending" || message.status === "streaming";
   const hasAudio = segments.some((s) => s.status === "ready");
+  /** TTS still running for some chunks (can outlive text generation). */
+  const synthesizing = segments.some((s) => s.status === "pending");
   const audioFailed =
-    !generating && !hasAudio && (message.status === "complete" || segments.length > 0);
+    !generating &&
+    !synthesizing &&
+    !hasAudio &&
+    (message.status === "complete" || segments.length > 0);
 
   return (
     <article className={`chapter ${isActive ? "chapter-active" : ""}`}>
@@ -45,6 +50,9 @@ export default function ChapterPlayer({
         <span className="chapter-label">
           Chapter {chapterNumber}
           {generating && <span className="chapter-generating"> · generating…</span>}
+          {!generating && synthesizing && !hasAudio && (
+            <span className="chapter-generating"> · preparing audio…</span>
+          )}
         </span>
         {isActive && player.buffering && <span className="chapter-buffering">buffering</span>}
       </div>
@@ -61,7 +69,7 @@ export default function ChapterPlayer({
         <button
           className={`play-btn ${isPlaying ? "playing" : ""}`}
           aria-label={isPlaying ? "Pause" : "Play"}
-          disabled={!hasAudio && !generating}
+          disabled={!hasAudio && !generating && !synthesizing}
           onClick={() => player.toggle(message._id, { title: conversationTitle })}
         >
           {isPlaying ? "❚❚" : "▶"}
