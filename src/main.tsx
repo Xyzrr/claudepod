@@ -12,6 +12,21 @@ import "./styles.css";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
+// iOS flips the audio session between "playback" and "play-and-record" as mic
+// capture starts/stops, which changes output loudness dramatically (and moves
+// volume control to the separate call-volume slider). Pinning the session type
+// keeps loudness consistent across mic toggles. Safari 17+; no-op elsewhere.
+const audioSession = (
+  navigator as Navigator & { audioSession?: { type: string } }
+).audioSession;
+if (audioSession) {
+  try {
+    audioSession.type = "play-and-record";
+  } catch {
+    // Unsupported value on this platform — keep the default session behavior.
+  }
+}
+
 function Root() {
   return (
     <>

@@ -94,6 +94,15 @@ public/            ← manifest.webmanifest, sw.js, icons/
   <li>TTS goes through <code>getTtsProvider()</code> (<code>convex/tts/index.ts</code>).
       Adding a provider = implement <code>TtsProvider</code>, register it there, document
       the env var. Never call a TTS HTTP API from anywhere else.</li>
+  <li><strong>Request stitching:</strong> chunks of one message are separate TTS requests,
+      and unconditioned requests each get an independent loudness/prosody “take” — audible
+      as a volume jump at every chunk boundary. So each <code>synthesize()</code> call
+      receives a <code>SynthesisContext</code> (previous chunk's text + up to 3 prior
+      <code>request-id</code>s, threaded through the sequential queue by
+      <code>makeStitchTracker</code> in <code>ai.ts</code>). ElevenLabs maps these to
+      <code>previous_text</code>/<code>previous_request_ids</code> and retries once
+      <em>unstitched</em> if a stitched request fails (expired ids, plan limits);
+      OpenAI ignores the context.</li>
 </ol>
 
 <h3>2. Playback: segments → one continuous chapter</h3>
@@ -108,6 +117,11 @@ session, which can pause or resume the element behind React's back —
 <code>useMic</code> reports capture changes via <code>onCaptureChange</code>, wired to
 <code>player.resync()</code>, which re-asserts the intended play/pause state (with
 delayed retries, since the session change can land after the toggle).
+To stop iOS from also swinging output <em>loudness</em> between the media and
+voice-processed routes on every mic toggle, <code>src/main.tsx</code> pins
+<code>navigator.audioSession.type = "play-and-record"</code> at startup
+(Audio Session API, Safari 17+; harmless no-op elsewhere) so the session category —
+and therefore volume — stays constant whether or not the mic is capturing.
 </p>
 <p>
 The ordered segments of a message are presented as one <em>virtual timeline</em>:

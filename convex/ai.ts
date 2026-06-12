@@ -10,6 +10,7 @@ import { CLAUDE_MODEL, MAX_RESPONSE_TOKENS } from "./appConfig";
 import { SPOKEN_SYSTEM_PROMPT, TITLE_PROMPT } from "./prompts";
 import { SentenceChunker } from "./lib/chunker";
 import { getTtsProvider } from "./tts";
+import type { SynthesisContext } from "./tts/types";
 
 function anthropicClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -21,7 +22,11 @@ function anthropicClient() {
   return new Anthropic({ apiKey });
 }
 
-/** Synthesize one chunk and persist it as a ready audio segment. */
+/**
+ * Synthesize one chunk and persist it as a ready audio segment. Returns the
+ * provider's request id (when exposed) so the caller can stitch the next
+ * chunk's request to this one for consistent loudness/prosody.
+ */
 async function synthesizeSegment(
   ctx: ActionCtx,
   args: {
@@ -30,11 +35,12 @@ async function synthesizeSegment(
     index: number;
     text: string;
   },
-) {
+  stitch?: SynthesisContext,
+): Promise<string | undefined> {
   const segmentId = await ctx.runMutation(internal.audio.createSegment, args);
   try {
     const provider = getTtsProvider();
-    const result = await provider.synthesize(args.text);
+    const result = await provider.synthesize(args.text, stitch);
     const storageId = await ctx.storage.store(
       new Blob([result.data], { type: result.mimeType }),
     );
@@ -44,12 +50,35 @@ async function synthesizeSegment(
       durationSec: result.durationSec,
       provider: provider.name,
     });
+    return result.requestId;
   } catch (error) {
     await ctx.runMutation(internal.audio.markSegmentError, {
       segmentId,
       error: error instanceof Error ? error.message : String(error),
     });
+    return undefined;
   }
+}
+
+/**
+ * Rolling stitching context across the chunks of one message. previousText
+ * always advances (it reflects the script, even if a chunk's audio failed);
+ * request ids are only appended for successful generations.
+ */
+function makeStitchTracker() {
+  let previousText: string | undefined;
+  let previousRequestIds: string[] = [];
+  return {
+    current(): SynthesisContext {
+      return { previousText, previousRequestIds };
+    },
+    advance(text: string, requestId: string | undefined) {
+      previousText = text;
+      if (requestId) {
+        previousRequestIds = [...previousRequestIds, requestId].slice(-3);
+      }
+    },
+  };
 }
 
 /**
@@ -84,20 +113,26 @@ export const generate = internalAction({
     let fullText = "";
     let segmentIndex = 0;
     let lastDbWrite = 0;
-    // Sequential synthesis queue: keeps segment order and provider rate limits
-    // sane while the Claude stream keeps flowing.
+    // Sequential synthesis queue: keeps segment order, provider rate limits,
+    // and the stitching chain sane while the Claude stream keeps flowing.
     let synthQueue: Promise<void> = Promise.resolve();
+    const stitch = makeStitchTracker();
 
     const enqueueChunk = (text: string) => {
       const index = segmentIndex++;
-      synthQueue = synthQueue.then(() =>
-        synthesizeSegment(ctx, {
-          messageId: assistantMessageId,
-          conversationId,
-          index,
-          text,
-        }),
-      );
+      synthQueue = synthQueue.then(async () => {
+        const requestId = await synthesizeSegment(
+          ctx,
+          {
+            messageId: assistantMessageId,
+            conversationId,
+            index,
+            text,
+          },
+          stitch.current(),
+        );
+        stitch.advance(text, requestId);
+      });
     };
 
     try {
@@ -208,13 +243,19 @@ export const regenerateAudio = action({
     const rest = chunker.flush();
     if (rest !== null) chunks.push(rest);
 
+    const stitch = makeStitchTracker();
     for (let index = 0; index < chunks.length; index++) {
-      await synthesizeSegment(ctx, {
-        messageId,
-        conversationId: message.conversationId,
-        index,
-        text: chunks[index],
-      });
+      const requestId = await synthesizeSegment(
+        ctx,
+        {
+          messageId,
+          conversationId: message.conversationId,
+          index,
+          text: chunks[index],
+        },
+        stitch.current(),
+      );
+      stitch.advance(chunks[index], requestId);
     }
   },
 });
