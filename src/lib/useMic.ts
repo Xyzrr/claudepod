@@ -148,6 +148,13 @@ export function useMic({
       try {
         setStatus("connecting");
         setError(null);
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error(
+            window.isSecureContext
+              ? "This browser doesn't support microphone capture."
+              : "Microphone needs HTTPS — open the app via an https:// URL (browsers block mic access on plain http).",
+          );
+        }
         if (!streamRef.current) {
           streamRef.current = await navigator.mediaDevices.getUserMedia({
             audio: {
