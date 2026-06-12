@@ -25,6 +25,9 @@ export const OPENAI_TTS_VOICE = "alloy";
  * starts soon; later chunks are bigger so the voice flows naturally.
  */
 export const TTS_CHUNKING = {
+  // The first chunk is cut at the FIRST sentence boundary so playback starts
+  // as soon as any speakable audio exists.
+  firstChunkMinChars: 25,
   firstChunkMaxChars: 280,
   minChars: 200,
   maxChars: 700,

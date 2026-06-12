@@ -34,7 +34,7 @@ export class SentenceChunker {
   private tryExtract(): string | null {
     const minChars = this.emittedAny
       ? TTS_CHUNKING.minChars
-      : Math.min(TTS_CHUNKING.minChars, TTS_CHUNKING.firstChunkMaxChars);
+      : TTS_CHUNKING.firstChunkMinChars;
     const maxChars = this.emittedAny
       ? TTS_CHUNKING.maxChars
       : TTS_CHUNKING.firstChunkMaxChars;

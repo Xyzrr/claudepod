@@ -5,7 +5,8 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { usePlayer } from "../lib/player";
 import { useMic } from "../lib/useMic";
-import ChapterPlayer from "../components/ChapterPlayer";
+import AssistantMessage from "../components/AssistantMessage";
+import NowPlayingBar from "../components/NowPlayingBar";
 import MicDock from "../components/MicDock";
 
 export default function Conversation() {
@@ -82,6 +83,11 @@ export default function Conversation() {
   }
 
   let chapterNumber = 0;
+  const assistantMessages = messages.filter((m) => m.role === "assistant");
+  const activeChapterIndex = assistantMessages.findIndex(
+    (m) => m._id === player.activeMessageId,
+  );
+  const activeChapterNumber = activeChapterIndex === -1 ? null : activeChapterIndex + 1;
 
   return (
     <div className="app app-conversation">
@@ -117,7 +123,7 @@ export default function Conversation() {
           }
           chapterNumber += 1;
           return (
-            <ChapterPlayer
+            <AssistantMessage
               key={message._id}
               message={message}
               chapterNumber={chapterNumber}
@@ -129,6 +135,13 @@ export default function Conversation() {
       </main>
 
       <MicDock
+        nowPlaying={
+          <NowPlayingBar
+            label={
+              activeChapterNumber !== null ? `Chapter ${activeChapterNumber}` : null
+            }
+          />
+        }
         micEnabled={micEnabled}
         setMicEnabled={(on) => {
           player.unlock(); // mic toggle is the natural first gesture

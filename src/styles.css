@@ -312,10 +312,10 @@ main {
 /* ---------- conversation thread ---------- */
 
 .app-conversation .thread {
-  padding-bottom: 220px; /* room for the dock */
+  padding-bottom: 320px; /* room for the dock + now-playing bar */
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .user-msg {
@@ -330,30 +330,38 @@ main {
   white-space: pre-wrap;
 }
 
-/* ---------- chapter (Audible-style card) ---------- */
+/* ---------- assistant answer (text-first) ---------- */
 
-.chapter {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px;
+.answer {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  gap: 6px;
+  padding: 4px 2px;
 }
 
-.chapter-active {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-}
-
-.chapter-top {
+.answer-head {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  gap: 10px;
 }
 
-.chapter-label {
+.answer-play {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.answer-play:disabled {
+  opacity: 0.4;
+}
+
+.answer-label {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -361,92 +369,124 @@ main {
   color: var(--muted);
 }
 
-.chapter-generating {
+.answer-state {
   color: var(--accent);
   text-transform: none;
   letter-spacing: normal;
   font-weight: 500;
+  animation: pulse 1.4s ease-in-out infinite;
 }
 
-.chapter-buffering {
+.answer-text {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.chunk {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.25s ease;
+}
+
+.chunk:hover {
+  background: var(--surface-2);
+}
+
+.chunk-active {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* ---------- now-playing bar ---------- */
+
+.nowplaying {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 14px 8px;
+}
+
+.np-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.np-label {
   font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--muted);
-  animation: pulse 1.2s ease-in-out infinite;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.chapter-controls {
+.np-buffering {
+  color: var(--accent);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.np-times {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.np-scrub {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 22px;
+  margin: 0;
+}
+
+.np-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 22px;
 }
 
-.play-btn {
-  width: 64px;
-  height: 64px;
+.np-play {
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 22px;
+  font-size: 17px;
   display: grid;
   place-items: center;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
-}
-
-.play-btn:disabled {
-  opacity: 0.4;
-  box-shadow: none;
 }
 
 .skip-btn {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--surface-2);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--ink);
 }
 
-.skip-btn:disabled {
-  opacity: 0.35;
-}
-
 .rate-btn {
-  min-width: 52px;
-  height: 36px;
+  min-width: 48px;
+  height: 34px;
   border-radius: 999px;
   background: var(--surface-2);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.chapter-scrub input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent);
-  height: 28px;
-}
-
-.chapter-times {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-}
-
-.transcript summary {
   font-size: 13px;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.transcript p {
-  font-family: var(--serif);
-  font-size: 16px;
-  line-height: 1.65;
-  white-space: pre-wrap;
-  margin: 10px 0 0;
+  font-weight: 700;
 }
 
 /* ---------- dock ---------- */

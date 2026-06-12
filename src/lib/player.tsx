@@ -37,6 +37,8 @@ export type PlayerMeta = { title?: string };
 
 type PlayerState = {
   activeMessageId: Id<"messages"> | null;
+  /** Index of the segment currently sounding (only meaningful when active). */
+  activeSegmentIndex: number;
   playing: boolean;
   /** True when we're between segments waiting for the next one's TTS. */
   buffering: boolean;
@@ -49,6 +51,12 @@ type PlayerState = {
 type PlayerApi = PlayerState & {
   playMessage: (messageId: Id<"messages">, meta?: PlayerMeta) => void;
   toggle: (messageId: Id<"messages">, meta?: PlayerMeta) => void;
+  /** Tap-to-seek: jump to a specific sentence-chunk of a message. */
+  seekToSegment: (
+    messageId: Id<"messages">,
+    index: number,
+    meta?: PlayerMeta,
+  ) => void;
   pause: () => void;
   seekTo: (seconds: number) => void;
   skip: (deltaSeconds: number) => void;
@@ -226,27 +234,48 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return sum + currentTime;
   }, [durations, segIndex, currentTime]);
 
-  const playMessage = useCallback(
-    (messageId: Id<"messages">, meta?: PlayerMeta) => {
+  const startMessageAt = useCallback(
+    (messageId: Id<"messages">, index: number, meta?: PlayerMeta) => {
       unlock();
-      metaRef.current = meta ?? {};
-      if (messageId === activeMessageId) {
-        const el = audio();
-        if (el.paused && el.src && waitingForIndexRef.current === null) {
-          setPlaying(true);
-          void el.play().catch(() => setPlaying(false));
-          return;
-        }
-      }
+      metaRef.current = meta ?? metaRef.current;
       setActiveMessageId(messageId);
       setCurrentTime(0);
       segmentsRef.current = messageId === activeMessageId ? segmentsRef.current : [];
       waitingForIndexRef.current = null;
       pendingSeekRef.current = null;
       // Defer one tick so the segments query (if cached) is in segmentsRef.
-      setTimeout(() => playSegmentAt(0), 0);
+      setTimeout(() => playSegmentAt(index), 0);
     },
     [activeMessageId, playSegmentAt, unlock],
+  );
+
+  const playMessage = useCallback(
+    (messageId: Id<"messages">, meta?: PlayerMeta) => {
+      if (messageId === activeMessageId) {
+        unlock();
+        const el = audio();
+        if (el.paused && el.src && waitingForIndexRef.current === null) {
+          metaRef.current = meta ?? metaRef.current;
+          setPlaying(true);
+          void el.play().catch(() => setPlaying(false));
+          return;
+        }
+      }
+      startMessageAt(messageId, 0, meta);
+    },
+    [activeMessageId, startMessageAt, unlock],
+  );
+
+  const seekToSegment = useCallback(
+    (messageId: Id<"messages">, index: number, meta?: PlayerMeta) => {
+      if (messageId === activeMessageId) {
+        unlock();
+        playSegmentAt(index);
+        return;
+      }
+      startMessageAt(messageId, index, meta);
+    },
+    [activeMessageId, playSegmentAt, startMessageAt, unlock],
   );
 
   const pause = useCallback(() => {
@@ -311,6 +340,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const api_: PlayerApi = {
     activeMessageId,
+    activeSegmentIndex: segIndex,
     playing,
     buffering,
     elapsed,
@@ -319,6 +349,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     segments,
     playMessage,
     toggle,
+    seekToSegment,
     pause,
     seekTo,
     skip,

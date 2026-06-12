@@ -112,7 +112,21 @@ server estimates (ElevenLabs: exact from CBR byte length; otherwise ~14&nbsp;cha
 and are refined to exact values from <code>loadedmetadata</code> via
 <code>audio.setSegmentDuration</code>. If playback reaches a segment whose TTS isn't done,
 the player shows “buffering” and resumes reactively when the row turns
-<code>ready</code>; errored segments are skipped, never fatal.
+<code>ready</code>; errored segments are skipped, never fatal. The first chunk is cut at
+the <em>first sentence boundary</em> (<code>firstChunkMinChars</code>) so audio starts as
+soon as any speakable sentence exists.
+</p>
+<p>
+<strong>Playback UI</strong>: there is exactly <em>one</em> control surface — the
+<code>NowPlayingBar</code> docked above the mic/composer (play/pause, ±15/30&nbsp;s,
+speed, scrubber, elapsed/remaining). Assistant responses render as flowing
+<em>text</em> (<code>AssistantMessage</code>): each TTS sentence-chunk is a tappable
+span — tapping seeks playback to that chunk
+(<code>player.seekToSegment</code>) — and the chunk currently being spoken is
+highlighted karaoke-style via <code>player.activeSegmentIndex</code>. Each response
+keeps one small play/listen button in its header row. Do not add per-message
+scrubbers/speed controls — speed and position are global state and live only in the
+bar.
 </p>
 
 <h3>3. Inbound: microphone rules (the part that makes it gym-proof)</h3>

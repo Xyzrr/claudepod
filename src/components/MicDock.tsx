@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import type { MicState } from "../lib/useMic";
 
 /**
- * Bottom dock: live transcription + "sending in…" countdown, the big
- * thumb-reachable mic toggle, and an always-available text composer.
+ * Bottom dock: now-playing bar (slot), live transcription + "sending in…"
+ * countdown, the big thumb-reachable mic toggle, and an always-available
+ * text composer.
  */
 export default function MicDock({
   micEnabled,
@@ -12,6 +13,7 @@ export default function MicDock({
   isPlaying,
   onSubmitText,
   disabled,
+  nowPlaying,
 }: {
   micEnabled: boolean;
   setMicEnabled: (on: boolean) => void;
@@ -19,6 +21,7 @@ export default function MicDock({
   isPlaying: boolean;
   onSubmitText: (text: string) => void;
   disabled: boolean;
+  nowPlaying?: ReactNode;
 }) {
   const [text, setText] = useState("");
 
@@ -35,6 +38,7 @@ export default function MicDock({
 
   return (
     <div className="dock">
+      {nowPlaying}
       {showVoicePanel && (
         <div className="voice-panel">
           {mic.status === "connecting" && <p className="voice-hint">Connecting microphone…</p>}
