@@ -27,7 +27,7 @@ export default function MicDock({
   const [text, setText] = useState("");
 
   const heard = [mic.draft, mic.interim].filter(Boolean).join(" ");
-  const showVoicePanel = micEnabled && (heard || mic.status !== "listening" || isPlaying);
+  const showVoicePanel = micEnabled && (heard || mic.status !== "listening");
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -46,15 +46,10 @@ export default function MicDock({
           {mic.status === "error" && (
             <p className="form-error">Mic error: {mic.error ?? "unknown"}</p>
           )}
-          {mic.status === "listening" && isPlaying && (
-            <p className="voice-hint">
-              Playing — say <strong>“stop”</strong> to pause. Everything else is ignored.
-            </p>
-          )}
           {mic.status === "listening" && !isPlaying && !heard && (
             <p className="voice-hint">Listening — just start talking.</p>
           )}
-          {heard && !isPlaying && (
+          {heard && (
             <>
               <p className="voice-transcript">
                 {mic.draft}

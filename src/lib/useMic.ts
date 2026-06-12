@@ -25,6 +25,12 @@ type UseMicArgs = {
   silenceMs: number;
   onSubmit: (text: string) => void;
   onStopCommand: () => void;
+  /**
+   * Fired when mic capture actually starts or stops. The OS may pause/resume
+   * other audio when the capture session changes; callers use this to
+   * re-assert playback state (player.resync).
+   */
+  onCaptureChange?: () => void;
 };
 
 export type MicState = {
@@ -57,6 +63,7 @@ export function useMic({
   silenceMs,
   onSubmit,
   onStopCommand,
+  onCaptureChange,
 }: UseMicArgs): MicState {
   const getToken = useAction(api.stt.getDeepgramToken);
 
@@ -81,9 +88,16 @@ export function useMic({
   onSubmitRef.current = onSubmit;
   const onStopCommandRef = useRef(onStopCommand);
   onStopCommandRef.current = onStopCommand;
+  const onCaptureChangeRef = useRef(onCaptureChange);
+  onCaptureChangeRef.current = onCaptureChange;
   const generationRef = useRef(0);
+  const interimClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetBuffers = useCallback(() => {
+    if (interimClearTimerRef.current) {
+      clearTimeout(interimClearTimerRef.current);
+      interimClearTimerRef.current = null;
+    }
     draftRef.current = "";
     setDraft("");
     setInterim("");
@@ -103,14 +117,25 @@ export function useMic({
   const handleTranscript = useCallback((transcript: string, isFinal: boolean) => {
     const text = transcript.trim();
     if (!text) return;
+    if (interimClearTimerRef.current) {
+      clearTimeout(interimClearTimerRef.current);
+      interimClearTimerRef.current = null;
+    }
 
     if (isPlayingRef.current) {
-      // Playback in progress: "stop" is the ONLY recognized command.
+      // Playback in progress: "stop" is the ONLY recognized command, but
+      // everything heard is shown live so the user can see why a mangled
+      // "stop" didn't take. Nothing here ever reaches the draft.
       if (STOP_COMMAND_REGEX.test(text)) {
         onStopCommandRef.current();
         draftRef.current = "";
         setDraft("");
         setInterim("");
+        return;
+      }
+      setInterim(text);
+      if (isFinal) {
+        interimClearTimerRef.current = setTimeout(() => setInterim(""), 2000);
       }
       return;
     }
@@ -138,6 +163,7 @@ export function useMic({
       resetBuffers();
       setStatus("off");
       setError(null);
+      onCaptureChangeRef.current?.();
       return;
     }
 
@@ -163,8 +189,16 @@ export function useMic({
               autoGainControl: true,
             },
           });
+          onCaptureChangeRef.current?.();
         }
-        if (generationRef.current !== generation) return;
+        if (generationRef.current !== generation) {
+          // Mic was toggled off while getUserMedia was in flight — the
+          // cleanup branch found nothing to stop, so stop the stream here.
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+          onCaptureChangeRef.current?.();
+          return;
+        }
 
         const { accessToken } = await getToken();
         if (generationRef.current !== generation) return;

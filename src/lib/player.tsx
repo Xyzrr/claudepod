@@ -63,6 +63,12 @@ type PlayerApi = PlayerState & {
   setRate: (rate: number) => void;
   /** Unlock audio inside any user gesture (send button, mic toggle, …). */
   unlock: () => void;
+  /**
+   * Re-assert the intended play/pause state onto the element. Mic capture
+   * starting/stopping makes iOS reconfigure the audio session, which can
+   * pause (or resume) the element behind our back.
+   */
+  resync: () => void;
 };
 
 const PlayerContext = createContext<PlayerApi | null>(null);
@@ -109,6 +115,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   segIndexRef.current = segIndex;
   const rateRef = useRef(rate);
   rateRef.current = rate;
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
 
   function audio(): HTMLAudioElement {
     if (!audioRef.current) {
@@ -339,6 +347,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio().playbackRate = value;
   }, []);
 
+  const resync = useCallback(() => {
+    const fix = () => {
+      const el = audio();
+      if (playingRef.current) {
+        if (el.paused && !el.ended && el.src && waitingForIndexRef.current === null) {
+          void el.play().catch(() => {});
+        }
+      } else if (!el.paused) {
+        el.pause();
+      }
+    };
+    // The audio-session change can land after the toggle settles — retry.
+    fix();
+    window.setTimeout(fix, 400);
+    window.setTimeout(fix, 1200);
+  }, []);
+
   // Lock-screen / hardware controls.
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
@@ -372,6 +397,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     skip,
     setRate,
     unlock,
+    resync,
   };
 
   return <PlayerContext.Provider value={api_}>{children}</PlayerContext.Provider>;

@@ -103,6 +103,11 @@ public/            ← manifest.webmanifest, sw.js, icons/
 from a user gesture. <code>unlock()</code> plays a base64 silent mp3 inside any gesture
 (mic toggle, send tap, play tap); after that the element can be re-pointed at segment
 URLs programmatically (this is how auto-play of fresh answers works).
+Starting/stopping mic capture makes the OS (iOS especially) reconfigure the audio
+session, which can pause or resume the element behind React's back —
+<code>useMic</code> reports capture changes via <code>onCaptureChange</code>, wired to
+<code>player.resync()</code>, which re-asserts the intended play/pause state (with
+delayed retries, since the session change can land after the toggle).
 </p>
 <p>
 The ordered segments of a message are presented as one <em>virtual timeline</em>:
@@ -138,7 +143,12 @@ bar.
     <td>Keep the Deepgram socket open but act on <em>nothing</em> except a loose
         “stop” (<code>STOP_COMMAND_REGEX</code> in <code>appConfig.ts</code>: “stop”,
         “okay stop”, “claude stop”…), which pauses playback. Gym chatter, music, grunts
-        are discarded. <strong>No barge-in on arbitrary speech — ever.</strong></td>
+        are discarded. <strong>No barge-in on arbitrary speech — ever.</strong>
+        There is deliberately <em>no</em> “say stop to pause” banner. Instead,
+        everything heard during playback renders as a live transcript in
+        <code>MicDock</code> — feedback for why a mangled “stop” didn't take — and
+        non-matching words fade ~2&nbsp;s after they finalize without ever touching the
+        prompt draft.</td>
   </tr>
   <tr>
     <td><strong>Playback stopped</strong> + mic on</td>

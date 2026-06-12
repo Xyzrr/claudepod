@@ -43,6 +43,7 @@ export default function Conversation() {
     silenceMs: settings?.silenceMs ?? 2750,
     onSubmit: submit,
     onStopCommand: player.pause,
+    onCaptureChange: player.resync,
   });
 
   // Auto-play a fresh answer once its first audio segment is ready.
