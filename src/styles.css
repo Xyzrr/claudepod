@@ -1,0 +1,676 @@
+/* ============ ClaudePod design system ============
+   Warm, clean Claude palette + Audible-style audio-first cards.
+   Mobile-first; safe-area aware; inputs ≥16px to prevent iOS zoom. */
+
+:root {
+  --bg: #faf9f5;
+  --surface: #ffffff;
+  --surface-2: #f0eee6;
+  --ink: #1f1e1d;
+  --muted: #6e6a63;
+  --line: #e4e1d8;
+  --accent: #d97757;
+  --accent-soft: #f5e3db;
+  --accent-ink: #ffffff;
+  --danger: #b3372f;
+  --serif: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --radius: 18px;
+  --dock-pad: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #262624;
+    --surface: #30302e;
+    --surface-2: #3a3935;
+    --ink: #f3f1ea;
+    --muted: #a7a299;
+    --line: #45433e;
+    --accent: #d97757;
+    --accent-soft: #4a342b;
+    --accent-ink: #ffffff;
+    --danger: #e0695f;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+input,
+select {
+  font-size: 16px; /* prevents iOS zoom-on-focus */
+  font-family: var(--sans);
+  color: var(--ink);
+}
+
+/* ---------- shells ---------- */
+
+.app {
+  max-width: 680px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.brand::first-letter {
+  color: var(--accent);
+}
+
+.header-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 18px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.icon-btn:active {
+  background: var(--surface-2);
+}
+
+.icon-btn.danger {
+  color: var(--danger);
+}
+
+main {
+  flex: 1;
+  padding: 16px;
+}
+
+/* ---------- splash & sign-in ---------- */
+
+.splash {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+}
+
+.splash-logo {
+  font-family: var(--serif);
+  font-size: 32px;
+  color: var(--muted);
+}
+
+.signin {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.signin-card {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.signin-tagline {
+  color: var(--muted);
+  font-family: var(--serif);
+  font-style: italic;
+  margin: 4px 0 28px;
+}
+
+.signin form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.signin label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.signin input {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ---------- buttons ---------- */
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 14px;
+  padding: 13px 20px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+}
+
+.btn-big {
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+}
+
+.btn-link {
+  color: var(--accent);
+  font-size: 14px;
+  padding: 10px 0;
+}
+
+.btn-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+/* ---------- library ---------- */
+
+.library-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.library-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 8px 14px 16px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.library-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.library-item-title {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.library-item-meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.empty {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--muted);
+}
+
+.empty-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.empty-sub {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 auto;
+  max-width: 320px;
+}
+
+/* ---------- conversation thread ---------- */
+
+.app-conversation .thread {
+  padding-bottom: 220px; /* room for the dock */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.user-msg {
+  align-self: flex-end;
+  max-width: 85%;
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 16px;
+  font-size: 16px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+/* ---------- chapter (Audible-style card) ---------- */
+
+.chapter {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.chapter-active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.chapter-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.chapter-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.chapter-generating {
+  color: var(--accent);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+}
+
+.chapter-buffering {
+  font-size: 12px;
+  color: var(--muted);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.chapter-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.play-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.play-btn:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+.skip-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.skip-btn:disabled {
+  opacity: 0.35;
+}
+
+.rate-btn {
+  min-width: 52px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chapter-scrub input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 28px;
+}
+
+.chapter-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.transcript summary {
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.transcript p {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  margin: 10px 0 0;
+}
+
+/* ---------- dock ---------- */
+
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 12px 16px calc(14px + var(--dock-pad));
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dock-library {
+  border-top: none;
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+.dock-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.composer {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 4px 4px 16px;
+}
+
+.composer input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 0;
+}
+
+.composer-send {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 18px;
+}
+
+.mic-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.mic-btn .mic-state {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mic-btn.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.mic-btn.on .mic-state {
+  color: var(--accent-ink);
+}
+
+.mic-btn.live {
+  animation: micPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------- voice panel ---------- */
+
+.voice-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 32dvh;
+  overflow-y: auto;
+}
+
+.voice-hint {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.voice-transcript {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.voice-transcript em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.voice-countdown {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---------- settings ---------- */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-bottom: 60px;
+}
+
+.settings-group h2 {
+  font-family: var(--serif);
+  font-size: 16px;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+
+.settings-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-help {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+  max-width: 220px;
+}
+
+.settings-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.settings-control input[type="range"] {
+  width: 110px;
+  accent-color: var(--accent);
+}
+
+.settings-control input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+.settings-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--muted);
+  min-width: 44px;
+  text-align: right;
+}
+
+.settings-control select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}

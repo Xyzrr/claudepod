@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ClaudePod — Architecture &amp; Agent Guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: Georgia, serif; max-width: 880px; margin: 2rem auto; padding: 0 1.25rem; line-height: 1.6; color: #1f1e1d; background: #faf9f5; }
+  h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
+  h1 { color: #d97757; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; background: #f0eee6; border-radius: 6px; }
+  code { padding: 0.1em 0.35em; }
+  pre { padding: 1em; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; border-bottom: 1px solid #e4e1d8; padding: 0.5em 0.75em; vertical-align: top; }
+  .callout { border-left: 4px solid #d97757; background: #fdf2ee; padding: 0.75em 1em; border-radius: 0 8px 8px 0; }
+</style>
+</head>
+<body>
+
+<h1>ClaudePod — Architecture &amp; Agent Guide</h1>
+
+<div class="callout">
+  <strong>To every agent (human or AI) working on this repo:</strong> this file is the
+  single source of truth for architecture and conventions. <strong>If you change how the
+  code works — schema, voice pipeline, providers, conventions — update this file in the
+  same change.</strong> <code>CLAUDE.md</code> and <code>AGENTS.md</code> intentionally
+  contain nothing but a pointer here; do not duplicate content into them.
+</div>
+
+<h2>What this app is</h2>
+<p>
+ClaudePod is a mobile-first PWA for <em>long-form voice conversations</em> with Claude —
+the Claude chat experience, but you listen instead of read. The target use case is asking
+a question at the gym and listening to a multi-minute answer between sets.
+<strong>Latency is explicitly not a priority; quality and reliability are.</strong>
+</p>
+
+<h2>Stack</h2>
+<table>
+  <tr><th>Layer</th><th>Choice</th><th>Notes</th></tr>
+  <tr><td>Runtime / PM</td><td>Bun</td><td><code>bun install</code>, <code>bun run …</code></td></tr>
+  <tr><td>Frontend</td><td>React 19 + React Router 7 + Vite</td><td>SPA (library mode router), mobile-first PWA</td></tr>
+  <tr><td>Backend</td><td>Convex</td><td>DB + file storage + actions; reactivity doubles as our streaming transport</td></tr>
+  <tr><td>Auth</td><td>Convex Auth, Password provider</td><td>Single-user oriented email/password; see <code>convex/auth.ts</code></td></tr>
+  <tr><td>LLM</td><td>Claude — model id <code>claude-fable-5</code></td><td>Configured in <strong>one</strong> constant: <code>CLAUDE_MODEL</code> in <code>convex/appConfig.ts</code>. Always keep this on the latest Claude model.</td></tr>
+  <tr><td>STT</td><td>Deepgram streaming (nova-3)</td><td>Browser ↔ Deepgram WebSocket, authorized by short-lived server-minted tokens</td></tr>
+  <tr><td>TTS</td><td>ElevenLabs (default) / OpenAI (fallback)</td><td>Behind one interface; switched by <code>TTS_PROVIDER</code> env var on the Convex deployment</td></tr>
+</table>
+
+<h2>Repository map</h2>
+<pre>
+convex/
+  appConfig.ts     ← ALL tunables: model id, TTS provider/voices, chunking, defaults
+  prompts.ts       ← spoken-prose system prompt + title prompt
+  schema.ts        ← conversations / messages / audioSegments / settings (+ auth tables)
+  auth.ts, auth.config.ts, http.ts   ← Convex Auth (Password)
+  conversations.ts ← library list (with total audio duration), create/delete/title
+  messages.ts      ← list/get/send; send schedules ai.generate
+  audio.ts         ← segment queries (signed URLs), duration refinement, internal CRUD
+  ai.ts            ← "use node": Claude streaming + TTS pipeline + regenerateAudio
+  stt.ts           ← mints short-lived Deepgram tokens (browser never sees the API key)
+  tts/             ← provider abstraction: types.ts, elevenlabs.ts, openai.ts, index.ts
+  lib/chunker.ts   ← incremental sentence chunker for streaming TTS
+src/
+  main.tsx         ← router + auth gate + service worker registration
+  lib/player.tsx   ← THE audio player (single shared &lt;audio&gt;, virtual timeline)
+  lib/useMic.ts    ← Deepgram mic hook (stop-command mode vs prompt mode)
+  routes/          ← SignIn, Library, Conversation, Settings
+  components/      ← ChapterPlayer (audio chapter card), MicDock (mic + composer)
+scripts/           ← generate-icons.ts, setup-auth.ts, sync-env.ts
+public/            ← manifest.webmanifest, sw.js, icons/
+</pre>
+
+<h2>The voice pipeline (read this before touching anything)</h2>
+
+<h3>1. Outbound: question → spoken answer</h3>
+<ol>
+  <li><code>messages.send</code> (mutation) inserts the user message and an assistant
+      placeholder (<code>status: "pending"</code>), then schedules
+      <code>internal.ai.generate</code>.</li>
+  <li><code>ai.generate</code> (node action) streams from Claude
+      (<code>client.messages.stream</code>, model <code>CLAUDE_MODEL</code>, system prompt
+      <code>SPOKEN_SYSTEM_PROMPT</code>, adaptive thinking). Streamed text is patched into
+      the message document (throttled to ~350&nbsp;ms). <strong>Convex reactivity is the
+      streaming transport</strong> — the client just subscribes to
+      <code>messages.list</code>; there is no SSE/WebSocket of our own.</li>
+  <li>In the same action, a <code>SentenceChunker</code> cuts the stream at sentence
+      boundaries (first chunk small for early playback, later chunks larger for prosody).
+      Each chunk becomes an <code>audioSegments</code> row (<code>pending</code> →
+      <code>ready</code>) whose mp3 lives in Convex file storage. Synthesis runs on a
+      sequential promise queue <em>concurrently</em> with the Claude stream, so early
+      sentences are playable while later ones are still being generated.</li>
+  <li>TTS goes through <code>getTtsProvider()</code> (<code>convex/tts/index.ts</code>).
+      Adding a provider = implement <code>TtsProvider</code>, register it there, document
+      the env var. Never call a TTS HTTP API from anywhere else.</li>
+</ol>
+
+<h3>2. Playback: segments → one continuous chapter</h3>
+<p>
+<code>src/lib/player.tsx</code> owns a <strong>single app-wide
+<code>HTMLAudioElement</code></strong> — required for iOS Safari, where audio must start
+from a user gesture. <code>unlock()</code> plays a base64 silent mp3 inside any gesture
+(mic toggle, send tap, play tap); after that the element can be re-pointed at segment
+URLs programmatically (this is how auto-play of fresh answers works).
+</p>
+<p>
+The ordered segments of a message are presented as one <em>virtual timeline</em>:
+elapsed = sum of prior segment durations + element <code>currentTime</code>. Seeking and
+±15/30&nbsp;s skips map a global offset back to (segment, offset). Durations start as
+server estimates (ElevenLabs: exact from CBR byte length; otherwise ~14&nbsp;chars/sec)
+and are refined to exact values from <code>loadedmetadata</code> via
+<code>audio.setSegmentDuration</code>. If playback reaches a segment whose TTS isn't done,
+the player shows “buffering” and resumes reactively when the row turns
+<code>ready</code>; errored segments are skipped, never fatal.
+</p>
+
+<h3>3. Inbound: microphone rules (the part that makes it gym-proof)</h3>
+<p><code>src/lib/useMic.ts</code> implements two strict modes:</p>
+<table>
+  <tr><th>State</th><th>Behavior</th></tr>
+  <tr>
+    <td><strong>Claude audio playing</strong> + mic on</td>
+    <td>Keep the Deepgram socket open but act on <em>nothing</em> except a loose
+        “stop” (<code>STOP_COMMAND_REGEX</code> in <code>appConfig.ts</code>: “stop”,
+        “okay stop”, “claude stop”…), which pauses playback. Gym chatter, music, grunts
+        are discarded. <strong>No barge-in on arbitrary speech — ever.</strong></td>
+  </tr>
+  <tr>
+    <td><strong>Playback stopped</strong> + mic on</td>
+    <td>Finalized transcripts accumulate into a draft. After
+        <code>silenceMs</code> of quiet (user-tunable, default 2750&nbsp;ms, Settings
+        slider 1.5–5&nbsp;s) the draft is submitted. The UI shows the live transcript and
+        a “Sending in&nbsp;Ns…” countdown with Cancel / Edit (Edit moves the draft into
+        the text composer). Any new speech resets the countdown.</td>
+  </tr>
+</table>
+<p>
+Auth: the browser opens <code>wss://api.deepgram.com/v1/listen</code> with a
+<strong>short-lived token</strong> minted by <code>stt.getDeepgramToken</code>
+(Deepgram <code>/v1/auth/grant</code>, 300&nbsp;s TTL) passed as the
+<code>["bearer", token]</code> WebSocket subprotocol. The real
+<code>DEEPGRAM_API_KEY</code> never reaches the client. Sockets auto-reconnect with a
+fresh token while the mic stays on. Audio is MediaRecorder
+<code>audio/webm;codecs=opus</code> in 250&nbsp;ms slices.
+</p>
+
+<h3>4. Resume / regenerate</h3>
+<p>
+Conversations are fully persisted; reopening one finds its audio intact (storage URLs are
+re-signed by the <code>audio.getSegments</code> query). If a completed message has no
+playable audio (historical failure, provider switch), <code>ChapterPlayer</code> offers
+“regenerate”, which calls <code>ai.regenerateAudio</code> — it re-chunks the stored text
+and synthesizes with the <em>current</em> provider.
+</p>
+
+<h2>Conventions</h2>
+<ul>
+  <li><strong>Model id lives in exactly one place</strong>: <code>CLAUDE_MODEL</code> in
+      <code>convex/appConfig.ts</code>. Same for voices, chunk sizes, defaults — config
+      goes in <code>appConfig.ts</code>, not inline.</li>
+  <li><strong>Claude must speak, not write</strong>: any prompt change must preserve the
+      no-markdown / no-lists / no-code spoken-prose contract in
+      <code>convex/prompts.ts</code> — the output is piped straight into TTS.</li>
+  <li><strong>Secrets live on the Convex deployment</strong> (env vars), synced from
+      <code>.env</code> by <code>bun run sync-env</code>. The browser bundle must never
+      contain an API key; the only key-shaped thing the client touches is the short-lived
+      Deepgram token.</li>
+  <li><strong>Ownership checks</strong>: every public query/mutation/action resolves
+      <code>getAuthUserId</code> and verifies the row's <code>userId</code>. Internal
+      functions trust their callers.</li>
+  <li><strong>iOS audio</strong>: never create a second <code>Audio</code>/“AudioContext”;
+      route all playback through the player provider so the one unlocked element is
+      reused. Call <code>player.unlock()</code> inside any new user-gesture handler that
+      may lead to playback.</li>
+  <li>Mobile-first: inputs ≥16px (no zoom-on-focus), safe-area insets on header/dock,
+      thumb-reachable primary controls.</li>
+</ul>
+
+<h2>Environment &amp; setup</h2>
+<pre>
+bun install
+bunx convex dev          # provisions/links the Convex dev deployment (.env.local)
+bun run setup-auth       # one-time: JWT keys + SITE_URL for Convex Auth
+cp .env.example .env     # fill in ANTHROPIC_API_KEY, DEEPGRAM_API_KEY, ELEVENLABS_API_KEY
+bun run sync-env         # pushes those keys to the Convex deployment
+bun run dev              # vite on :5173  (run `bun run dev:backend` alongside)
+</pre>
+<p>
+Switching TTS to the cheaper fallback: set <code>TTS_PROVIDER=openai</code> (and
+<code>OPENAI_API_KEY</code>) in <code>.env</code>, re-run <code>bun run sync-env</code>.
+New audio uses OpenAI; old cached audio keeps playing; “regenerate” re-voices old
+messages.
+</p>
+
+<h2>Data model (convex/schema.ts)</h2>
+<table>
+  <tr><th>Table</th><th>Purpose</th></tr>
+  <tr><td><code>conversations</code></td><td>Library entries; <code>updatedAt</code> drives ordering; title auto-generated after the first exchange.</td></tr>
+  <tr><td><code>messages</code></td><td>User and assistant turns. Assistant <code>status</code>: pending → streaming → complete | error.</td></tr>
+  <tr><td><code>audioSegments</code></td><td>Ordered TTS chunks per assistant message; <code>storageId</code> points at the mp3; <code>durationSec</code> estimate refined by the client.</td></tr>
+  <tr><td><code>settings</code></td><td>Per-user: <code>silenceMs</code>, <code>playbackRate</code>, <code>autoPlay</code>.</td></tr>
+</table>
+
+<h2>Testing notes</h2>
+<ul>
+  <li><code>bunx tsc --noEmit</code> and <code>bunx vite build</code> must stay green.</li>
+  <li>The mic pipeline needs a real device/mic; on desktop Chrome you can fake it with
+      <code>--use-fake-device-for-media-stream</code>.</li>
+  <li>iOS-specific behaviors to re-test after player changes: first-gesture unlock,
+      lock-screen MediaSession controls, playback continuing with screen off.</li>
+</ul>
+
+</body>
+</html>
