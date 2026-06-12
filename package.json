@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "icons": "bun run scripts/generate-icons.ts",
     "setup-auth": "bun run scripts/setup-auth.ts",
-    "sync-env": "bun run scripts/sync-env.ts"
+    "sync-env": "bun run scripts/sync-env.ts",
+    "deploy": "bun run scripts/deploy.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

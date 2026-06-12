@@ -28,10 +28,13 @@ if (!foundAny) {
   process.exit(1);
 }
 
+// Pass --prod to target the production deployment instead of dev.
+const target = process.argv.includes("--prod") ? ["--prod"] : [];
+
 for (const key of KEYS) {
   const value = env[key];
   if (value) {
-    await $`bunx convex env set ${key} ${value}`;
+    await $`bunx convex env set ${target} ${key} ${value}`;
     console.log(`set ${key}`);
   } else {
     console.log(`skip ${key} (empty)`);

@@ -207,6 +207,21 @@ New audio uses OpenAI; old cached audio keeps playing; “regenerate” re-voice
 messages.
 </p>
 
+<h2>Production</h2>
+<p>
+The app is deployed at <strong>https://claudepod.vercel.app</strong> (Vercel project
+<code>claudepod</code>, scope <code>johnqs-projects</code>), backed by the
+<strong>production</strong> Convex deployment
+<code>polished-opossum-478.convex.cloud</code> — a separate deployment from dev, with
+its own data, env vars, and auth keys (accounts do not carry over from dev).
+<code>bun run deploy</code> (scripts/deploy.ts) pushes Convex prod functions, builds the
+frontend against the prod URL, and ships the static build to Vercel prebuilt — no remote
+build. It needs <code>VERCEL_TOKEN</code> in <code>.env</code>. If prod env vars change,
+use <code>bun run sync-env -- --prod</code> / <code>bun run setup-auth -- --prod</code>.
+The dev tunnel alternative for phone testing is
+<code>cloudflared tunnel --url http://localhost:5173</code> (mic requires HTTPS).
+</p>
+
 <h2>Data model (convex/schema.ts)</h2>
 <table>
   <tr><th>Table</th><th>Purpose</th></tr>
