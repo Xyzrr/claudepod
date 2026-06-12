@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import type { Doc } from "../../convex/_generated/dataModel";
 import { usePlayer } from "../lib/player";
 import { estimateSpeechSeconds, formatTime } from "../lib/format";
+import { IconPause, IconPlay } from "./icons";
 
 /**
  * An assistant response rendered as flowing text. Each TTS sentence-chunk is
@@ -78,7 +79,7 @@ export default function AssistantMessage({
           disabled={!hasAudio && !generating && !synthesizing}
           onClick={() => player.toggle(message._id, meta)}
         >
-          {isPlaying ? "❚❚" : "▶"}
+          {isPlaying ? <IconPause size={15} /> : <IconPlay size={15} />}
         </button>
         <span className="answer-label">
           Chapter {chapterNumber}

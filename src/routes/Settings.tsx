@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { IconBack } from "../components/icons";
 import {
   MAX_SILENCE_MS,
   MIN_SILENCE_MS,
@@ -17,7 +18,7 @@ export default function Settings() {
     <div className="app">
       <header className="header">
         <Link className="icon-btn" to="/" aria-label="Back">
-          ←
+          <IconBack />
         </Link>
         <h1 className="header-title">Settings</h1>
         <span className="icon-btn" aria-hidden="true" />
@@ -41,6 +42,13 @@ export default function Settings() {
                 step={250}
                 value={settings.silenceMs}
                 onChange={(e) => void update({ silenceMs: Number(e.target.value) })}
+                style={{
+                  ["--progress" as string]: `${
+                    ((settings.silenceMs - MIN_SILENCE_MS) /
+                      (MAX_SILENCE_MS - MIN_SILENCE_MS)) *
+                    100
+                  }%`,
+                }}
               />
               <span className="settings-value">
                 {(settings.silenceMs / 1000).toFixed(2)}s

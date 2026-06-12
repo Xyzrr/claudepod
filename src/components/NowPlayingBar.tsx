@@ -1,6 +1,12 @@
 import { usePlayer } from "../lib/player";
 import { formatTime } from "../lib/format";
 import { PLAYBACK_RATES } from "../../convex/appConfig";
+import {
+  IconPause,
+  IconPlay,
+  IconSkipBack15,
+  IconSkipForward30,
+} from "./icons";
 
 /**
  * The single audio control surface. Only one track can sound at a time, so
@@ -32,20 +38,23 @@ export default function NowPlayingBar({ label }: { label: string | null }) {
         value={Math.round(Math.min(elapsed, total) * 10)}
         onChange={(e) => player.seekTo(Number(e.target.value) / 10)}
         aria-label="Seek"
+        style={{
+          ["--progress" as string]: `${total > 0 ? Math.min(100, (elapsed / total) * 100) : 0}%`,
+        }}
       />
       <div className="np-controls">
         <button className="skip-btn" aria-label="Back 15 seconds" onClick={() => player.skip(-15)}>
-          ↺15
+          <IconSkipBack15 size={26} />
         </button>
         <button
           className="np-play"
           aria-label={playing || buffering ? "Pause" : "Play"}
           onClick={() => player.toggle(messageId)}
         >
-          {playing || buffering ? "❚❚" : "▶"}
+          {playing || buffering ? <IconPause size={20} /> : <IconPlay size={20} />}
         </button>
         <button className="skip-btn" aria-label="Forward 30 seconds" onClick={() => player.skip(30)}>
-          30↻
+          <IconSkipForward30 size={26} />
         </button>
         <button
           className="rate-btn"

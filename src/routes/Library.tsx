@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import { formatDate, formatTime } from "../lib/format";
+import { IconGear, IconSignOut, IconX } from "../components/icons";
 
 /** The "library": every past session, resumable with its audio intact. */
 export default function Library() {
@@ -18,10 +19,10 @@ export default function Library() {
         <h1 className="brand">ClaudePod</h1>
         <div className="header-actions">
           <Link className="icon-btn" to="/settings" aria-label="Settings">
-            ⚙︎
+            <IconGear />
           </Link>
           <button className="icon-btn" onClick={() => void signOut()} aria-label="Sign out">
-            ⎋
+            <IconSignOut />
           </button>
         </div>
       </header>
@@ -50,7 +51,7 @@ export default function Library() {
                   </span>
                 </div>
                 <button
-                  className="icon-btn danger"
+                  className="icon-btn delete-btn"
                   aria-label="Delete conversation"
                   onClick={(event) => {
                     event.preventDefault();
@@ -59,7 +60,7 @@ export default function Library() {
                     }
                   }}
                 >
-                  ✕
+                  <IconX size={16} />
                 </button>
               </Link>
             </li>

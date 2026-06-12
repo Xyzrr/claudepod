@@ -8,6 +8,7 @@ import { useMic } from "../lib/useMic";
 import AssistantMessage from "../components/AssistantMessage";
 import NowPlayingBar from "../components/NowPlayingBar";
 import MicDock from "../components/MicDock";
+import { IconBack, IconGear } from "../components/icons";
 
 export default function Conversation() {
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -93,13 +94,13 @@ export default function Conversation() {
     <div className="app app-conversation">
       <header className="header">
         <Link className="icon-btn" to="/" aria-label="Library">
-          ←
+          <IconBack />
         </Link>
         <h1 className="header-title" title={conversation?.title}>
           {conversation?.title ?? "…"}
         </h1>
         <Link className="icon-btn" to="/settings" aria-label="Settings">
-          ⚙︎
+          <IconGear />
         </Link>
       </header>
 

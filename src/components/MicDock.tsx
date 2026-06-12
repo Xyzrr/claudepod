@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { MicState } from "../lib/useMic";
+import { IconMic, IconSend } from "./icons";
 
 /**
  * Bottom dock: now-playing bar (slot), live transcription + "sending in…"
@@ -85,7 +86,7 @@ export default function MicDock({
           <input
             type="text"
             value={text}
-            placeholder="Type instead…"
+            placeholder={micEnabled ? "Type instead…" : "Ask anything…"}
             onChange={(e) => setText(e.target.value)}
             enterKeyHint="send"
           />
@@ -95,7 +96,7 @@ export default function MicDock({
             disabled={disabled || !text.trim()}
             aria-label="Send"
           >
-            ↑
+            <IconSend size={18} />
           </button>
         </form>
         <button
@@ -106,7 +107,7 @@ export default function MicDock({
           aria-pressed={micEnabled}
           onClick={() => setMicEnabled(!micEnabled)}
         >
-          {micEnabled ? "🎙" : "🎙"}
+          <IconMic size={24} />
           <span className="mic-state">{micEnabled ? "On" : "Off"}</span>
         </button>
       </div>
