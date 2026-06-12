@@ -64,6 +64,7 @@ convex/
   lib/chunker.ts   ← incremental sentence chunker for streaming TTS
 src/
   main.tsx         ← router + auth gate + service worker registration
+  lib/audioSession.ts ← iOS Audio Session pinning for mic + playback volume
   lib/player.tsx   ← THE audio player (single shared &lt;audio&gt;, virtual timeline)
   lib/useMic.ts    ← Deepgram mic hook (stop-command mode vs prompt mode)
   routes/          ← SignIn, Library, Conversation, Settings
@@ -118,10 +119,13 @@ session, which can pause or resume the element behind React's back —
 <code>player.resync()</code>, which re-asserts the intended play/pause state (with
 delayed retries, since the session change can land after the toggle).
 To stop iOS from also swinging output <em>loudness</em> between the media and
-voice-processed routes on every mic toggle, <code>src/main.tsx</code> pins
-<code>navigator.audioSession.type = "play-and-record"</code> at startup
-(Audio Session API, Safari 17+; harmless no-op elsewhere) so the session category —
-and therefore volume — stays constant whether or not the mic is capturing.
+voice-processed routes on every mic toggle, <code>src/lib/audioSession.ts</code> pins
+<code>navigator.audioSession.type = "play-and-record"</code>
+(Audio Session API, Safari 17+; harmless no-op elsewhere). The app applies the pin at
+startup and re-applies it during mic start/stop and player resync retries, because
+Safari can reset the session type as <code>getUserMedia</code> changes capture state.
+This keeps the session category — and therefore volume — consistent whether or not the
+mic is capturing.
 </p>
 <p>
 The ordered segments of a message are presented as one <em>virtual timeline</em>:

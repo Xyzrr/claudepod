@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { STOP_COMMAND_REGEX } from "../../convex/appConfig";
+import { pinAudioSessionForMicPlayback } from "./audioSession";
 
 /**
  * Microphone + Deepgram live transcription with two modes:
@@ -153,6 +154,7 @@ export function useMic({
   // Connect / disconnect with the mic toggle.
   useEffect(() => {
     if (!enabled) {
+      pinAudioSessionForMicPlayback();
       generationRef.current++;
       recorderRef.current?.stop();
       recorderRef.current = null;
@@ -164,6 +166,8 @@ export function useMic({
       setStatus("off");
       setError(null);
       onCaptureChangeRef.current?.();
+      window.setTimeout(pinAudioSessionForMicPlayback, 400);
+      window.setTimeout(pinAudioSessionForMicPlayback, 1200);
       return;
     }
 
@@ -182,6 +186,7 @@ export function useMic({
           );
         }
         if (!streamRef.current) {
+          pinAudioSessionForMicPlayback();
           streamRef.current = await navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
@@ -189,6 +194,7 @@ export function useMic({
               autoGainControl: true,
             },
           });
+          pinAudioSessionForMicPlayback();
           onCaptureChangeRef.current?.();
         }
         if (generationRef.current !== generation) {
@@ -196,7 +202,10 @@ export function useMic({
           // cleanup branch found nothing to stop, so stop the stream here.
           streamRef.current.getTracks().forEach((t) => t.stop());
           streamRef.current = null;
+          pinAudioSessionForMicPlayback();
           onCaptureChangeRef.current?.();
+          window.setTimeout(pinAudioSessionForMicPlayback, 400);
+          window.setTimeout(pinAudioSessionForMicPlayback, 1200);
           return;
         }
 

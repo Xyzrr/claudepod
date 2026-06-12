@@ -11,6 +11,7 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { pinAudioSessionForMicPlayback } from "./audioSession";
 import { estimateSpeechSeconds } from "./format";
 
 /**
@@ -129,6 +130,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }
 
   const unlock = useCallback(() => {
+    pinAudioSessionForMicPlayback();
     if (unlockedRef.current) return;
     unlockedRef.current = true;
     const el = audio();
@@ -349,6 +351,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const resync = useCallback(() => {
     const fix = () => {
+      pinAudioSessionForMicPlayback();
       const el = audio();
       if (playingRef.current) {
         if (el.paused && !el.ended && el.src && waitingForIndexRef.current === null) {
